@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: white; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 1px solid black; padding: 10px; width: 70%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <h1>Users</h1>
+    <div id="users">
+    </div>
+
+    <h1>Messages</h1>
+    <ul id="messages"></ul>
+    <form action="">
+
+      <span id="username"></span><input id="m" autocomplete="off" /><button>Sendo</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+        var socket = io();
+
+        var userList = [];
+
+        $.ajax({
+            url: 'https://randomuser.me/api/',
+            dataType: 'json',
+            success: function(data) {
+                console.log(data);
+                let username = data.results[0].name.last;
+                $("#username").text(username);
+                socket.emit('login', username);
+            }
+        });
+
+        
+        $('form').submit(function(e){
+          e.preventDefault();
+
+          var targets = [];
+
+          $("#users input:checked").each(function(index, elem){
+              console.log(elem);
+              targets.push($(elem).attr("name"));
+          });
+          console.log(targets);
+
+
+          socket.emit('chat message', { targets: targets, message: $('#m').val() });
+          $('#m').val('');
+          return false;
+        });
+
+        socket.on('chat message', function(msg){
+            $('#messages').append($('<li>').text(msg));
+        });
+
+        socket.on('directMessage', function(msg){
+            console.log("directed message");
+            console.log(msg);
+        })
+
+        socket.on('userList', function(users)
+        {
+            userList = users.filter(u => {
+                return u.socketId != socket.io.engine.id;
+            });
+
+            $("#users").empty();
+            userList.map(u => {
+                
+                $("#users").append($(`<div><input type="checkbox" name="${u.socketId}"> ${u.name} </div>`));
+            })
+        });
+    </script>
+  </body>
+</html>
